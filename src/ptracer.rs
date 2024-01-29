@@ -431,6 +431,12 @@ impl Ptracer {
 
         r
     }
+	pub fn detach(&mut self, tracee: Tracee) -> Result<()> {
+		let Tracee { pid, pending, .. } = tracee;
+		let signal = pending.unwrap_or(Signal::SIGCONT);
+		nix::sys::ptrace::detach(pid, signal)?;
+		Ok(())
+	}
 
     // Poll tracees for a `wait(2)` status change.
     fn poll_tracees(&self) -> Result<Option<WaitStatus>> {
