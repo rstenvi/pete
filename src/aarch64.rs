@@ -4,17 +4,6 @@ const NT_ARM_HW_WATCH: i32 = 0x403;
 
 pub type DebugRegisters = user_hwdebug_state;
 
-/// Defined in [`arch/arm64/include/uapi/asm/ptrace.h`](https://android.googlesource.com/kernel/common/+/refs/heads/android-mainline/arch/arm64/include/uapi/asm/ptrace.h#88).
-#[cfg(target_arch = "aarch64")]
-#[repr(C)]
-#[derive(Clone, Copy, Debug)]
-pub struct user_pt_regs {
-    pub regs: [u64; 31],
-    pub sp: u64,
-    pub pc: u64,
-    pub pstate: u64
-}
-
 /// Nested, untagged struct declaration in `user_hwdebug_state`.
 #[cfg(target_arch = "aarch64")]
 #[repr(C)]

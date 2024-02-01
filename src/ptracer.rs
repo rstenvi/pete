@@ -36,20 +36,15 @@ pub use nix::sys::ptrace::Options;
 /// POSIX signal.
 pub use nix::sys::signal::Signal;
 
-/// Register state of a tracee.
-#[cfg(target_arch = "aarch64")]
-pub type Registers = aarch64::user_pt_regs;
+#[cfg(all(target_arch = "arm"))]
+pub type Registers = libc::user_regs;
 
 /// Register state of a tracee.
-#[cfg(target_arch = "x86_64")]
+#[cfg(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64", target_arch = "riscv64"))]
 pub type Registers = libc::user_regs_struct;
 
 /// Extra signal info, such as its cause.
-pub type Siginfo = libc::siginfo_t;
-
-/// Linux constant defined in `include/uapi/linux/elf.h`.
-#[cfg(target_arch = "aarch64")]
-const NT_PRSTATUS: i32 = 0x1;
+pub type Siginfo = nix::libc::siginfo_t;
 
 /// A _ptrace-stop_, a tracee state in which it is stopped and ready to accept ptrace
 /// commands.
@@ -132,12 +127,6 @@ impl Tracee {
         Ok(ptrace::setoptions(self.pid, options).died_if_esrch(self.pid)?)
     }
 
-    #[cfg(target_arch = "x86_64")]
-    pub fn registers(&self) -> Result<Registers> {
-        Ok(ptrace::getregs(self.pid).died_if_esrch(self.pid)?)
-    }
-
-    #[cfg(target_arch = "aarch64")]
     pub fn registers(&self) -> Result<Registers> {
 
         let mut data = std::mem::MaybeUninit::uninit();
@@ -147,20 +136,14 @@ impl Tracee {
         };
 
         let res = unsafe {
-            libc::ptrace(libc::PTRACE_GETREGSET, self.pid, NT_PRSTATUS, &mut rv as *mut _ as *mut libc::c_void)
+            libc::ptrace(libc::PTRACE_GETREGSET, self.pid, libc::NT_PRSTATUS, &mut rv as *mut _ as *mut libc::c_void)
         };
 
-        Errno::result(res)?;
+        Errno::result(res).died_if_esrch(self.pid)?;
 
         Ok( unsafe { data.assume_init() } )
     }
 
-    #[cfg(target_arch = "x86_64")]
-    pub fn set_registers(&mut self, regs: Registers) -> Result<()> {
-        Ok(ptrace::setregs(self.pid, regs).died_if_esrch(self.pid)?)
-    }
-
-    #[cfg(target_arch = "aarch64")]
     pub fn set_registers(&mut self, regs: Registers) -> Result<()> {
         let mut rv = libc::iovec {
             iov_base: &regs as *const _ as *const libc::c_void as *mut libc::c_void,
@@ -168,10 +151,10 @@ impl Tracee {
         };
 
         let res = unsafe {
-            libc::ptrace(libc::PTRACE_SETREGSET, self.pid, NT_PRSTATUS, &mut rv as *mut _ as *mut libc::c_void)
+            libc::ptrace(libc::PTRACE_SETREGSET, self.pid, libc::NT_PRSTATUS, &mut rv as *mut _ as *mut libc::c_void)
         };
 
-        Errno::result(res)?;
+        Errno::result(res).died_if_esrch(self.pid)?;
 
         Ok(())
     }
