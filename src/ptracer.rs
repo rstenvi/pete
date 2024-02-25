@@ -134,9 +134,13 @@ impl Tracee {
             iov_base: &mut data as *mut _ as *mut libc::c_void,
             iov_len: std::mem::size_of::<Registers>(),
         };
+		#[cfg(any(target_env = "gnu", target_env = "uclibc"))]
+		let cmd = libc::PTRACE_GETREGSET as libc::c_uint;
+		#[cfg(not(any(target_env = "gnu", target_env = "uclibc")))]
+		let cmd = libc::PTRACE_GETREGSET as libc::c_int;
 
         let res = unsafe {
-            libc::ptrace(libc::PTRACE_GETREGSET, self.pid, libc::NT_PRSTATUS, &mut rv as *mut _ as *mut libc::c_void)
+            libc::ptrace(cmd, self.pid, libc::NT_PRSTATUS, &mut rv as *mut _ as *mut libc::c_void)
         };
 
         Errno::result(res).died_if_esrch(self.pid)?;
@@ -150,8 +154,13 @@ impl Tracee {
             iov_len: std::mem::size_of::<Registers>(),
         };
 
+		#[cfg(any(target_env = "gnu", target_env = "uclibc"))]
+		let cmd = libc::PTRACE_SETREGSET as libc::c_uint;
+		#[cfg(not(any(target_env = "gnu", target_env = "uclibc")))]
+		let cmd = libc::PTRACE_SETREGSET as libc::c_int;
+
         let res = unsafe {
-            libc::ptrace(libc::PTRACE_SETREGSET, self.pid, libc::NT_PRSTATUS, &mut rv as *mut _ as *mut libc::c_void)
+            libc::ptrace(cmd, self.pid, libc::NT_PRSTATUS, &mut rv as *mut _ as *mut libc::c_void)
         };
 
         Errno::result(res).died_if_esrch(self.pid)?;
