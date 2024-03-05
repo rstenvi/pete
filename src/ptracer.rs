@@ -40,7 +40,7 @@ pub use nix::sys::signal::Signal;
 pub type Registers = libc::user_regs;
 
 /// Register state of a tracee.
-#[cfg(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64", target_arch = "riscv64"))]
+#[cfg(any(target_arch = "x86", target_arch = "x86_64", target_arch = "aarch64", target_arch = "riscv64", target_arch = "mips"))]
 pub type Registers = libc::user_regs_struct;
 
 /// Extra signal info, such as its cause.
