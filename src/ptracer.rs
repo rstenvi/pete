@@ -127,6 +127,21 @@ impl Tracee {
         Ok(ptrace::setoptions(self.pid, options).died_if_esrch(self.pid)?)
     }
 
+	#[cfg(target_arch = "mips")]
+    pub fn registers(&self) -> Result<Registers> {
+		let mut data: std::mem::MaybeUninit<Registers> = std::mem::MaybeUninit::uninit();
+		let res = unsafe {
+			libc::ptrace(
+				libc::PTRACE_GETREGS,
+				libc::pid_t::from(self.pid),
+				std::ptr::null_mut::<Registers>(),
+				data.as_mut_ptr() as *const _ as *const libc::c_void,
+			)
+		};
+		Errno::result(res).died_if_esrch(self.pid)?;
+		Ok(unsafe { data.assume_init() })
+    }
+	#[cfg(not(target_arch = "mips"))]
     pub fn registers(&self) -> Result<Registers> {
 
         let mut data = std::mem::MaybeUninit::uninit();
@@ -144,10 +159,24 @@ impl Tracee {
         };
 
         Errno::result(res).died_if_esrch(self.pid)?;
-
         Ok( unsafe { data.assume_init() } )
     }
 
+	#[cfg(target_arch = "mips")]
+    pub fn set_registers(&self, regs: Registers) -> Result<()> {
+		let res = unsafe {
+			libc::ptrace(
+				libc::PTRACE_SETREGS,
+				libc::pid_t::from(self.pid),
+				std::ptr::null_mut::<libc::c_void>(),
+				&regs as *const _ as *const libc::c_void,
+			)
+		};
+		Errno::result(res).map(drop).died_if_esrch(self.pid)?;
+		Ok(())
+    }
+
+	#[cfg(not(target_arch = "mips"))]
     pub fn set_registers(&mut self, regs: Registers) -> Result<()> {
         let mut rv = libc::iovec {
             iov_base: &regs as *const _ as *const libc::c_void as *mut libc::c_void,
